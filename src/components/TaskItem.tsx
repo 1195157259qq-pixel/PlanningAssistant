@@ -5,20 +5,16 @@ import { Task, TaskStatus, STATUS_LABELS, STATUS_COLORS, REPEAT_LABELS } from '.
 interface Props {
   task: Task
   onSelect: (task: Task) => void
+  onDeleteWithUndo?: (task: Task) => void
 }
 
-export default function TaskItem({ task, onSelect }: Props) {
+export default function TaskItem({ task, onSelect, onDeleteWithUndo }: Props) {
   const { dispatch } = useStore()
-  const isDone = task.status === 'done' || task.status === 'overdue-done'
+  const isDone = task.status === 'done'
 
   const toggleDone = (e: React.MouseEvent) => {
     e.stopPropagation()
-    let newStatus: TaskStatus
-    if (isDone) {
-      newStatus = (!task.hasDueDate || task.dueDate >= new Date().toISOString().split('T')[0]) ? 'todo' : 'overdue'
-    } else {
-      newStatus = (!task.hasDueDate || task.dueDate >= new Date().toISOString().split('T')[0]) ? 'done' : 'overdue-done'
-    }
+    const newStatus: TaskStatus = isDone ? 'todo' : 'done'
     dispatch({ type: 'SET_STATUS', payload: { id: task.id, status: newStatus } })
   }
 
@@ -29,7 +25,11 @@ export default function TaskItem({ task, onSelect }: Props) {
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation()
-    dispatch({ type: 'DELETE_TASK', payload: task.id })
+    if (onDeleteWithUndo) {
+      onDeleteWithUndo(task)
+    } else {
+      dispatch({ type: 'DELETE_TASK', payload: task.id })
+    }
   }
 
   return React.createElement('div', {

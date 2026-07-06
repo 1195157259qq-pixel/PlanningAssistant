@@ -1,7 +1,13 @@
-import React, { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useStore } from '../store'
 import { Task, STATUS_COLORS } from '../types'
-import TaskDetailModal from './TaskDetailModal'
+
+function formatDateLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 function formatDateCN(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00')
@@ -12,17 +18,26 @@ function formatDateCN(dateStr: string): string {
 function addDays(dateStr: string, n: number): string {
   const d = new Date(dateStr + 'T00:00:00')
   d.setDate(d.getDate() + n)
-  return d.toISOString().split('T')[0]
+  return formatDateLocal(d)
+}
+
+function getTodayStr(): string {
+  return formatDateLocal(new Date())
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 
-export default function DayView() {
+interface Props {
+  onEdit?: (task: Task) => void
+  onDeleteWithUndo?: (task: Task) => void
+  onTaskClick?: (task: Task) => void
+}
+
+export default function DayView({ onTaskClick }: Props) {
   const { state, dispatch } = useStore()
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
   const dateStr = state.selectedDate
-  const todayStr = new Date().toISOString().split('T')[0]
+  const todayStr = getTodayStr()
 
   const dayTasks = useMemo(() => {
     return state.tasks.filter(t => t.dueDate === dateStr)
@@ -44,55 +59,56 @@ export default function DayView() {
     return map
   }, [dayTasks])
 
-  return React.createElement('div', { className: 'view-container' },
-    React.createElement('div', { className: 'date-nav' },
-      React.createElement('button', {
-        className: 'date-nav-btn',
-        onClick: () => dispatch({ type: 'SET_DATE', payload: addDays(dateStr, -1) }),
-      }, '\u2039'),
-      React.createElement('span', { className: 'date-nav-date' }, formatDateCN(dateStr)),
-      React.createElement('button', {
-        className: 'date-nav-btn',
-        onClick: () => dispatch({ type: 'SET_DATE', payload: addDays(dateStr, 1) }),
-      }, '\u203A'),
-      React.createElement('button', {
-        className: 'date-nav-today',
-        onClick: () => dispatch({ type: 'SET_DATE', payload: todayStr }),
-      }, '今天'),
-    ),
-    React.createElement('div', { className: 'day-view' },
-      dayTasks.length === 0
-        ? React.createElement('div', { className: 'day-no-tasks' }, '当天没有任务')
-        : React.createElement('div', { className: 'day-slots' },
-            ...HOURS.map(hour => {
+  return (
+    <div className="view-container">
+      <div className="date-nav">
+        <button className="date-nav-btn" onClick={() => {
+          dispatch({ type: 'SET_DATE', payload: addDays(state.selectedDate, -1) })
+        }}>{'\u25C0'}</button>
+        <span className="date-nav-date">{formatDateCN(dateStr)}</span>
+        <button className="date-nav-btn" onClick={() => {
+          dispatch({ type: 'SET_DATE', payload: addDays(state.selectedDate, 1) })
+        }}>{'\u25B6'}</button>
+        <button className="date-nav-today" onClick={() => {
+          dispatch({ type: 'SET_DATE', payload: todayStr })
+        }}>今天</button>
+      </div>
+      <div className="day-view">
+        {dayTasks.length === 0 ? (
+          <div className="day-no-tasks">当天没有任务</div>
+        ) : (
+          <div className="day-slots">
+            {HOURS.map(hour => {
               const tasks = tasksByHour[hour]
               if (tasks.length === 0) return null
-              return React.createElement('div', { className: 'day-slot', key: hour },
-                React.createElement('div', { className: 'day-slot-time' },
-                  `${String(hour).padStart(2, '0')}:00`,
-                ),
-                React.createElement('div', { className: 'day-slot-content' },
-                  ...tasks.map(task => {
-                    const isDone = task.status === 'done' || task.status === 'overdue-done'
-                    return React.createElement('div', {
-                      key: task.id,
-                      className: 'day-task-chip',
-                      style: {
-                        background: STATUS_COLORS[task.status],
-                        textDecoration: isDone ? 'line-through' : 'none',
-                        opacity: isDone ? 0.65 : 1,
-                      },
-                      onClick: () => setSelectedTask(task),
-                    }, task.title + (task.dueTime ? ' ' + task.dueTime : ''))
-                  }),
-                ),
+              return (
+                <div className="day-slot" key={hour}>
+                  <div className="day-slot-time">{String(hour).padStart(2, '0')}:00</div>
+                  <div className="day-slot-content">
+                    {tasks.map(task => {
+                      const isDone = task.status === 'done'
+                      return (
+                        <div
+                          key={task.id}
+                          className="day-task-chip"
+                          style={{
+                            background: STATUS_COLORS[task.status],
+                            textDecoration: isDone ? 'line-through' : 'none',
+                            opacity: isDone ? 0.65 : 1,
+                          }}
+                          onClick={() => onTaskClick?.(task)}
+                        >
+                          {task.title}{task.dueTime ? ' ' + task.dueTime : ''}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               )
-            }),
-          ),
-    ),
-    selectedTask && React.createElement(TaskDetailModal, {
-      task: selectedTask,
-      onClose: () => setSelectedTask(null),
-    }),
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }

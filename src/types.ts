@@ -1,4 +1,4 @@
-export type TaskStatus = 'todo' | 'done' | 'overdue' | 'overdue-done'
+export type TaskStatus = 'todo' | 'done' | 'overdue'
 export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export interface Task {
@@ -15,6 +15,14 @@ export interface Task {
   createdAt: string
 }
 
+export interface CountdownEvent {
+  id: string
+  title: string
+  targetDate: string
+  targetTime: string
+  createdAt: string
+}
+
 export type ViewType = 'list' | 'day' | 'week' | 'month' | 'tools'
 
 export interface AppState {
@@ -22,6 +30,8 @@ export interface AppState {
   currentView: ViewType
   selectedDate: string
   categories: string[]
+  countdowns: CountdownEvent[]
+  pomodoroSessions: number
 }
 
 export type AppAction =
@@ -33,24 +43,26 @@ export type AppAction =
   | { type: 'SET_DATE'; payload: string }
   | { type: 'LOAD_TASKS'; payload: Task[] }
   | { type: 'LOAD_STATE'; payload: AppState }
+  | { type: 'ADD_COUNTDOWN'; payload: Omit<CountdownEvent, 'id' | 'createdAt'> }
+  | { type: 'DELETE_COUNTDOWN'; payload: string }
+  | { type: 'INCREMENT_POMODORO' }
+  | { type: 'UPDATE_CATEGORIES'; payload: string[] }
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   'todo': '待办',
   'done': '已办',
-  'overdue': '过期待办',
-  'overdue-done': '过期已办',
+  'overdue': '过期未办',
 }
 
 export const STATUS_COLORS: Record<TaskStatus, string> = {
-  'todo': '#3b82f6',
-  'done': '#10b981',
-  'overdue': '#ef4444',
-  'overdue-done': '#f59e0b',
+  'todo': '#7cc5ea',
+  'done': '#8fd4a3',
+  'overdue': '#f5a97f',
 }
 
 export const REPEAT_LABELS: Record<RepeatType, string> = {
   'none': '不重复',
-  'daily': '每天',
+  'daily': '每日',
   'weekly': '每周',
   'monthly': '每月',
   'yearly': '每年',

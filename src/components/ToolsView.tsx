@@ -1,23 +1,23 @@
 import React, { useState } from 'react'
 import Countdown from './Countdown'
-import Stopwatch from './Stopwatch'
 import Pomodoro from './Pomodoro'
 import Statistics from './Statistics'
+import DataManager from './DataManager'
 
-type ToolTab = 'countdown' | 'stopwatch' | 'pomodoro' | 'stats'
+type ToolTab = 'countdown' | 'pomodoro' | 'stats' | 'data'
 
 const TOOLS: { key: ToolTab; label: string }[] = [
   { key: 'countdown', label: '倒计时' },
-  { key: 'stopwatch', label: '计时器' },
   { key: 'pomodoro', label: '番茄钟' },
   { key: 'stats', label: '统计' },
+  { key: 'data', label: '数据' },
 ]
 
 const toolMap: Record<ToolTab, React.ReactElement> = {
   countdown: React.createElement(Countdown),
-  stopwatch: React.createElement(Stopwatch),
   pomodoro: React.createElement(Pomodoro),
   stats: React.createElement(Statistics),
+  data: React.createElement(DataManager),
 }
 
 export default function ToolsView() {

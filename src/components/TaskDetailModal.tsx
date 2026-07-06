@@ -5,25 +5,25 @@ import { Task, STATUS_COLORS, REPEAT_LABELS } from '../types'
 interface Props {
   task: Task
   onClose: () => void
+  onEdit?: () => void
+  onDeleteWithUndo?: (task: Task) => void
 }
 
-export default function TaskDetailModal({ task, onClose }: Props) {
+export default function TaskDetailModal({ task, onClose, onEdit, onDeleteWithUndo }: Props) {
   const { dispatch } = useStore()
-  const isDone = task.status === 'done' || task.status === 'overdue-done'
+  const isDone = task.status === 'done'
 
   const toggleDone = () => {
-    const todayStr = new Date().toISOString().split('T')[0]
-    let newStatus: typeof task.status
-    if (isDone) {
-      newStatus = (!task.hasDueDate || task.dueDate >= todayStr) ? 'todo' : 'overdue'
-    } else {
-      newStatus = (!task.hasDueDate || task.dueDate >= todayStr) ? 'done' : 'overdue-done'
-    }
+    const newStatus: typeof task.status = isDone ? 'todo' : 'done'
     dispatch({ type: 'SET_STATUS', payload: { id: task.id, status: newStatus } })
   }
 
   const handleDelete = () => {
-    dispatch({ type: 'DELETE_TASK', payload: task.id })
+    if (onDeleteWithUndo) {
+      onDeleteWithUndo(task)
+    } else {
+      dispatch({ type: 'DELETE_TASK', payload: task.id })
+    }
     onClose()
   }
 
@@ -49,6 +49,7 @@ export default function TaskDetailModal({ task, onClose }: Props) {
           task.location && React.createElement('div', null, '\u{1F4CD} 地点: ', task.location),
         ),
       React.createElement('div', { className: 'form-actions' },
+        onEdit && React.createElement('button', { className: 'btn btn-primary', onClick: onEdit }, '编辑'),
         React.createElement('button', { className: 'btn btn-secondary', onClick: toggleDone },
           isDone ? '\u21A9 标记未完成' : '\u2713 标记已完成',
         ),

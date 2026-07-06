@@ -1,153 +1,216 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
+import { useStore, getTodayStr } from '../store'
 
 function pad(n: number): string {
   return String(n).padStart(2, '0')
 }
 
+function parseDate(d: string) {
+  const parts = d.split('-')
+  return {
+    year: parseInt(parts[0]) || new Date().getFullYear(),
+    month: parseInt(parts[1]) || 1,
+    day: parseInt(parts[2]) || 1,
+  }
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(year, month, 0).getDate()
+}
+
+function calcRemaining(cd: { targetDate: string; targetTime: string }) {
+  const target = new Date(cd.targetDate + 'T' + (cd.targetTime || '00:00:00'))
+  const diff = target.getTime() - Date.now()
+  const totalSeconds = Math.max(0, Math.floor(diff / 1000))
+  return {
+    totalSeconds,
+    passed: diff <= 0,
+    d: Math.floor(totalSeconds / 86400),
+    h: Math.floor((totalSeconds % 86400) / 3600),
+    m: Math.floor((totalSeconds % 3600) / 60),
+    s: totalSeconds % 60,
+  }
+}
+
+const YEAR_RANGE = Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i)
+const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
+const HOURS = Array.from({ length: 24 }, (_, i) => i)
+const MINUTES = Array.from({ length: 60 }, (_, i) => i)
+const SECONDS = Array.from({ length: 60 }, (_, i) => i)
+
 export default function Countdown() {
-  const [hours, setHours] = useState(0)
-  const [minutes, setMinutes] = useState(25)
-  const [seconds, setSeconds] = useState(0)
-  const [running, setRunning] = useState(false)
-  const [remaining, setRemaining] = useState(0)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const totalSeconds = hours * 3600 + minutes * 60 + seconds
-
-  const clearTimer = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-  }, [])
-
-  const start = () => {
-    if (totalSeconds <= 0) return
-    setRemaining(totalSeconds)
-    setRunning(true)
-  }
-
-  const pause = () => {
-    setRunning(false)
-    clearTimer()
-  }
-
-  const reset = () => {
-    setRunning(false)
-    clearTimer()
-    setRemaining(0)
-  }
+  const { state, dispatch } = useStore()
+  const todayStr = getTodayStr()
+  const [tick, setTick] = useState(0)
 
   useEffect(() => {
-    if (running && remaining > 0) {
-      intervalRef.current = setInterval(() => {
-        setRemaining(prev => {
-          if (prev <= 1) {
-            setRunning(false)
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-    return () => clearTimer()
-  }, [running])
-
-  useEffect(() => {
-    return () => clearTimer()
+    const timer = setInterval(() => setTick(t => t + 1), 1000)
+    return () => clearInterval(timer)
   }, [])
 
-  const displayH = Math.floor(remaining / 3600)
-  const displayM = Math.floor((remaining % 3600) / 60)
-  const displayS = remaining % 60
+  const [title, setTitle] = useState('')
+  const [dateStr, setDateStr] = useState(todayStr)
+  const [hour, setHour] = useState(0)
+  const [minute, setMinute] = useState(0)
+  const [second, setSecond] = useState(0)
+  const [hasTime, setHasTime] = useState(false)
+
+  const dateParts = useMemo(() => parseDate(dateStr), [dateStr])
+  const maxDay = daysInMonth(dateParts.year, dateParts.month)
+
+  const setPart = (part: 'year' | 'month' | 'day', val: number) => {
+    const p = { ...dateParts, [part]: val }
+    if (part === 'year' || part === 'month') {
+      const md = Math.min(p.day, daysInMonth(p.year, p.month))
+      p.day = md
+    }
+    setDateStr(`${p.year}-${pad(p.month)}-${pad(p.day)}`)
+  }
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) return
+    dispatch({
+      type: 'ADD_COUNTDOWN',
+      payload: {
+        title: title.trim(),
+        targetDate: dateStr,
+        targetTime: hasTime ? `${pad(hour)}:${pad(minute)}:${pad(second)}` : '',
+      },
+    })
+    setTitle('')
+    setDateStr(todayStr)
+    setHasTime(false)
+    setHour(0)
+    setMinute(0)
+    setSecond(0)
+  }
 
   const selStyle: React.CSSProperties = {
-    padding: '8px 6px',
-    borderRadius: 8,
+    padding: '8px 4px',
     border: '1px solid var(--border)',
-    fontSize: 16,
+    borderRadius: 8,
+    fontSize: 14,
     fontFamily: 'inherit',
-    cursor: running ? 'default' : 'pointer',
+    cursor: 'pointer',
     background: '#fff',
-    textAlign: 'center',
     outline: 'none',
-  }
-
-  const timerStyle: React.CSSProperties = {
     textAlign: 'center',
-    padding: '40px 0',
-  }
-
-  const digitStyle: React.CSSProperties = {
-    fontSize: 64,
-    fontWeight: 200,
-    fontVariantNumeric: 'tabular-nums',
-    letterSpacing: 4,
-    color: remaining === 0 && !running ? 'var(--text-secondary)' : 'var(--text)',
+    appearance: 'auto',
+    flex: 1,
+    minWidth: 0,
   }
 
   return React.createElement('div', null,
-    running
-      ? React.createElement('div', { style: timerStyle },
-          React.createElement('div', { style: digitStyle },
-            pad(displayH) + ':' + pad(displayM) + ':' + pad(displayS),
-          ),
-          React.createElement('div', { style: { display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 } },
-            React.createElement('button', { className: 'btn btn-primary', onClick: pause }, '暂停'),
-            React.createElement('button', { className: 'btn btn-secondary', onClick: reset }, '重置'),
-          ),
-        )
-      : React.createElement('div', null,
-          React.createElement('div', { style: timerStyle },
-            React.createElement('div', { style: digitStyle },
-              remaining > 0
-                ? pad(displayH) + ':' + pad(displayM) + ':' + pad(displayS)
-                : '00:00:00',
-            ),
-          ),
-          React.createElement('div', { style: { display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center', marginBottom: 20 } },
-            React.createElement('select', {
-              style: selStyle,
-              value: hours,
-              disabled: running,
-              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setHours(parseInt(e.target.value)),
-            },
-              ...Array.from({ length: 24 }, (_, i) =>
-                React.createElement('option', { key: i, value: i }, pad(i) + ' 时'),
-              ),
-            ),
-            React.createElement('span', { style: { fontSize: 20, color: '#999' } }, ':'),
-            React.createElement('select', {
-              style: selStyle,
-              value: minutes,
-              disabled: running,
-              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setMinutes(parseInt(e.target.value)),
-            },
-              ...Array.from({ length: 60 }, (_, i) =>
-                React.createElement('option', { key: i, value: i }, pad(i) + ' 分'),
-              ),
-            ),
-            React.createElement('span', { style: { fontSize: 20, color: '#999' } }, ':'),
-            React.createElement('select', {
-              style: selStyle,
-              value: seconds,
-              disabled: running,
-              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setSeconds(parseInt(e.target.value)),
-            },
-              ...Array.from({ length: 60 }, (_, i) =>
-                React.createElement('option', { key: i, value: i }, pad(i) + ' 秒'),
-              ),
-            ),
-          ),
-          React.createElement('div', { style: { display: 'flex', gap: 12, justifyContent: 'center' } },
-            React.createElement('button', {
-              className: 'btn btn-primary',
-              onClick: start,
-              disabled: totalSeconds <= 0,
-              style: { minWidth: 100 },
-            }, remaining > 0 ? '继续' : '开始'),
-            remaining > 0 && React.createElement('button', { className: 'btn btn-secondary', onClick: reset }, '重置'),
+    React.createElement('form', { onSubmit: handleAdd, style: { marginBottom: 20 } },
+      React.createElement('div', { className: 'form-group' },
+        React.createElement('input', {
+          className: 'form-input',
+          type: 'text',
+          value: title,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value),
+          placeholder: '输入事件名称',
+        }),
+      ),
+      React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+        React.createElement('select', {
+          style: selStyle,
+          value: dateParts.year,
+          onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('year', parseInt(e.target.value)),
+        },
+          ...YEAR_RANGE.map(y =>
+            React.createElement('option', { key: y, value: y }, y + '年'),
           ),
         ),
+        React.createElement('select', {
+          style: selStyle,
+          value: dateParts.month,
+          onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('month', parseInt(e.target.value)),
+        },
+          ...MONTHS.map(m =>
+            React.createElement('option', { key: m, value: m }, m + '月'),
+          ),
+        ),
+        React.createElement('select', {
+          style: selStyle,
+          value: dateParts.day,
+          onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('day', parseInt(e.target.value)),
+        },
+          ...Array.from({ length: maxDay }, (_, i) => i + 1).map(d =>
+            React.createElement('option', { key: d, value: d }, d + '日'),
+          ),
+        ),
+      ),
+      React.createElement('label', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, cursor: 'pointer', fontSize: 13 } },
+        React.createElement('input', {
+          type: 'checkbox',
+          checked: hasTime,
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => setHasTime(e.target.checked),
+          style: { cursor: 'pointer' },
+        }),
+        '设置具体时间',
+      ),
+      hasTime && React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+        React.createElement('select', { style: selStyle, value: hour, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setHour(parseInt(e.target.value)) },
+          ...HOURS.map(h => React.createElement('option', { key: h, value: h }, pad(h) + '时')),
+        ),
+        React.createElement('select', { style: selStyle, value: minute, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setMinute(parseInt(e.target.value)) },
+          ...MINUTES.map(m => React.createElement('option', { key: m, value: m }, pad(m) + '分')),
+        ),
+        React.createElement('select', { style: selStyle, value: second, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setSecond(parseInt(e.target.value)) },
+          ...SECONDS.map(s => React.createElement('option', { key: s, value: s }, pad(s) + '秒')),
+        ),
+      ),
+      React.createElement('button', {
+        className: 'btn btn-primary',
+        type: 'submit',
+        disabled: !title.trim(),
+        style: { width: '100%' },
+      }, '添加倒计时'),
+    ),
+
+    state.countdowns.length === 0 && React.createElement('div', { className: 'empty-state' },
+      React.createElement('div', { className: 'empty-state-text' }, '暂无倒计时事件，添加一个吧'),
+    ),
+
+    ...state.countdowns
+      .sort((a, b) => new Date(a.targetDate + 'T' + (a.targetTime || '00:00:00')).getTime() - new Date(b.targetDate + 'T' + (b.targetTime || '00:00:00')).getTime())
+      .map(cd => {
+        const { passed, d, h, m, s } = calcRemaining(cd)
+
+        return React.createElement('div', {
+          key: cd.id,
+          style: {
+            background: 'var(--card-bg)',
+            borderRadius: 'var(--radius)',
+            padding: 16,
+            boxShadow: 'var(--shadow)',
+            marginBottom: 12,
+            borderLeft: `4px solid ${passed ? '#10b981' : '#3b82f6'}`,
+          },
+        },
+          React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
+            React.createElement('div', null,
+              React.createElement('div', { style: { fontSize: 15, fontWeight: 600 } }, cd.title),
+              React.createElement('div', { style: { fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 } },
+                cd.targetDate + (cd.targetTime ? ' ' + cd.targetTime : ''),
+              ),
+            ),
+            React.createElement('button', {
+              className: 'btn btn-secondary btn-xs',
+              onClick: () => dispatch({ type: 'DELETE_COUNTDOWN', payload: cd.id }),
+              style: { color: '#ef4444' },
+            }, '删除'),
+          ),
+          React.createElement('div', { style: { fontSize: 28, fontWeight: 700, textAlign: 'center', marginTop: 12, fontVariantNumeric: 'tabular-nums' } },
+            passed
+              ? '已到达'
+              : d + '天 ' + pad(h) + ':' + pad(m) + ':' + pad(s),
+          ),
+          React.createElement('div', { style: { fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', marginTop: 4 } },
+            passed ? '事件已发生' : '距离事件还剩',
+          ),
+        )
+      }),
   )
 }

@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react'
 import { useStore, getTodayStr } from '../store'
-import { RepeatType, REPEAT_LABELS } from '../types'
+import { RepeatType, REPEAT_LABELS, Task } from '../types'
+import { PROVINCES, PROVINCE_LIST } from './Settings'
 
 interface Props {
   onClose: () => void
+  editTask?: Task
 }
 
 function pad(n: number): string {
@@ -36,21 +38,26 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const MINUTES = Array.from({ length: 60 }, (_, i) => i)
 
-export default function TaskForm({ onClose }: Props) {
+export default function TaskForm({ onClose, editTask }: Props) {
   const { state, dispatch } = useStore()
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [hasDueDate, setHasDueDate] = useState(true)
-  const [dueDate, setDueDate] = useState(getTodayStr())
-  const [isAllDay, setIsAllDay] = useState(true)
-  const [dueTime, setDueTime] = useState('')
-  const [repeat, setRepeat] = useState<RepeatType>('none')
-  const [category, setCategory] = useState('')
-  const [location, setLocation] = useState('')
+  const isEditing = !!editTask
+  const [title, setTitle] = useState(editTask?.title || '')
+  const [description, setDescription] = useState(editTask?.description || '')
+  const [hasDueDate, setHasDueDate] = useState(editTask?.hasDueDate ?? true)
+  const [dueDate, setDueDate] = useState(editTask?.dueDate || getTodayStr())
+  const [isAllDay, setIsAllDay] = useState(!editTask?.dueTime)
+  const [dueTime, setDueTime] = useState(editTask?.dueTime || '')
+  const [repeat, setRepeat] = useState<RepeatType>(editTask?.repeat || 'none')
+  const [category, setCategory] = useState(editTask?.category || '')
+  const [province, setProvince] = useState('')
+  const [city, setCity] = useState('')
+  const [location, setLocation] = useState(editTask?.location || '')
 
   const dateParts = useMemo(() => parseDate(dueDate), [dueDate])
   const timeParts = useMemo(() => parseTime(dueTime || '08:00'), [dueTime])
   const maxDay = daysInMonth(dateParts.year, dateParts.month)
+
+  const cities = province ? (PROVINCES[province] || []) : []
 
   const setPart = (part: 'year' | 'month' | 'day', val: number) => {
     const p = { ...dateParts, [part]: val }
@@ -66,23 +73,42 @@ export default function TaskForm({ onClose }: Props) {
     setDueTime(`${pad(t.hour)}:${pad(t.minute)}`)
   }
 
+  const handleProvinceChange = (p: string) => {
+    setProvince(p)
+    setCity('')
+  }
+
+  const handleCityChange = (c: string) => {
+    setCity(c)
+    setLocation(province + ' ' + c)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
-    dispatch({
-      type: 'ADD_TASK',
-      payload: {
-        title: title.trim(),
-        description: description.trim(),
-        dueDate: hasDueDate ? dueDate : '',
-        dueTime: hasDueDate && !isAllDay ? dueTime : '',
-        hasDueDate,
-        repeat,
-        category: category.trim(),
-        location: location.trim(),
-        status: 'todo',
-      },
-    })
+    const payload = {
+      title: title.trim(),
+      description: description.trim(),
+      dueDate: hasDueDate ? dueDate : '',
+      dueTime: hasDueDate && !isAllDay ? dueTime : '',
+      hasDueDate,
+      repeat,
+      category: category.trim(),
+      location: location.trim(),
+      status: editTask?.status || 'todo' as const,
+    }
+
+    if (isEditing && editTask) {
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: { ...editTask, ...payload },
+      })
+    } else {
+      dispatch({
+        type: 'ADD_TASK',
+        payload,
+      })
+    }
     onClose()
   }
 
@@ -102,7 +128,7 @@ export default function TaskForm({ onClose }: Props) {
 
   return React.createElement('div', { className: 'modal-overlay', onClick: onClose },
     React.createElement('div', { className: 'modal', onClick: (e: React.MouseEvent) => e.stopPropagation() },
-      React.createElement('div', { className: 'modal-title' }, '新建任务'),
+      React.createElement('div', { className: 'modal-title' }, isEditing ? '编辑任务' : '新建任务'),
       React.createElement('form', { onSubmit: handleSubmit },
         React.createElement('div', { className: 'form-group' },
           React.createElement('label', { className: 'form-label' }, '任务标题 *'),
@@ -212,28 +238,49 @@ export default function TaskForm({ onClose }: Props) {
         ),
         React.createElement('div', { className: 'form-group' },
           React.createElement('label', { className: 'form-label' }, '分类'),
-          React.createElement('input', {
+          React.createElement('select', {
             className: 'form-input',
-            type: 'text',
             value: category,
-            onChange: (e: React.ChangeEvent<HTMLInputElement>) => setCategory(e.target.value),
-            placeholder: '输入或选择分类',
-            list: 'category-list',
-          }),
-          React.createElement('datalist', { id: 'category-list' },
+            onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setCategory(e.target.value),
+          },
+            React.createElement('option', { value: '' }, '无分类'),
             ...state.categories.map(c =>
-              React.createElement('option', { key: c, value: c }),
+              React.createElement('option', { key: c, value: c }, c),
             ),
+            category && !state.categories.includes(category) && React.createElement('option', { value: category }, category),
           ),
         ),
         React.createElement('div', { className: 'form-group' },
           React.createElement('label', { className: 'form-label' }, '地点'),
+          React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+            React.createElement('select', {
+              style: selStyle,
+              value: province,
+              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => handleProvinceChange(e.target.value),
+            },
+              React.createElement('option', { value: '' }, '选择省/市'),
+              ...PROVINCE_LIST.map(p =>
+                React.createElement('option', { key: p, value: p }, p),
+              ),
+            ),
+            React.createElement('select', {
+              style: selStyle,
+              value: city,
+              onChange: (e: React.ChangeEvent<HTMLSelectElement>) => handleCityChange(e.target.value),
+              disabled: !province,
+            },
+              React.createElement('option', { value: '' }, province ? '选择市/区' : '请先选择省市'),
+              ...cities.map(c =>
+                React.createElement('option', { key: c, value: c }, c),
+              ),
+            ),
+          ),
           React.createElement('input', {
             className: 'form-input',
             type: 'text',
             value: location,
             onChange: (e: React.ChangeEvent<HTMLInputElement>) => setLocation(e.target.value),
-            placeholder: '输入地点（可选）',
+            placeholder: '或手动输入地点',
           }),
         ),
         React.createElement('div', { className: 'form-actions' },
@@ -246,7 +293,7 @@ export default function TaskForm({ onClose }: Props) {
             className: 'btn btn-primary',
             type: 'submit',
             disabled: !title.trim(),
-          }, '创建任务'),
+          }, isEditing ? '保存修改' : '创建任务'),
         ),
       ),
     ),
