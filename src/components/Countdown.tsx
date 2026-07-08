@@ -86,21 +86,6 @@ export default function Countdown() {
     setSecond(0)
   }
 
-  const selStyle: React.CSSProperties = {
-    padding: '8px 4px',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-    background: '#fff',
-    outline: 'none',
-    textAlign: 'center',
-    appearance: 'auto',
-    flex: 1,
-    minWidth: 0,
-  }
-
   return React.createElement('div', null,
     React.createElement('form', { onSubmit: handleAdd, style: { marginBottom: 20 } },
       React.createElement('div', { className: 'form-group' },
@@ -112,9 +97,9 @@ export default function Countdown() {
           placeholder: '输入事件名称',
         }),
       ),
-      React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+      React.createElement('div', { className: 'form-date-row', style: { marginBottom: 8 } },
         React.createElement('select', {
-          style: selStyle,
+          className: 'form-date-select',
           value: dateParts.year,
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('year', parseInt(e.target.value)),
         },
@@ -123,7 +108,7 @@ export default function Countdown() {
           ),
         ),
         React.createElement('select', {
-          style: selStyle,
+          className: 'form-date-select',
           value: dateParts.month,
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('month', parseInt(e.target.value)),
         },
@@ -132,7 +117,7 @@ export default function Countdown() {
           ),
         ),
         React.createElement('select', {
-          style: selStyle,
+          className: 'form-date-select',
           value: dateParts.day,
           onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('day', parseInt(e.target.value)),
         },
@@ -150,14 +135,14 @@ export default function Countdown() {
         }),
         '设置具体时间',
       ),
-      hasTime && React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
-        React.createElement('select', { style: selStyle, value: hour, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setHour(parseInt(e.target.value)) },
+      hasTime && React.createElement('div', { className: 'form-date-row', style: { marginBottom: 8 } },
+        React.createElement('select', { className: 'form-date-select', value: hour, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setHour(parseInt(e.target.value)) },
           ...HOURS.map(h => React.createElement('option', { key: h, value: h }, pad(h) + '时')),
         ),
-        React.createElement('select', { style: selStyle, value: minute, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setMinute(parseInt(e.target.value)) },
+        React.createElement('select', { className: 'form-date-select', value: minute, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setMinute(parseInt(e.target.value)) },
           ...MINUTES.map(m => React.createElement('option', { key: m, value: m }, pad(m) + '分')),
         ),
-        React.createElement('select', { style: selStyle, value: second, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setSecond(parseInt(e.target.value)) },
+        React.createElement('select', { className: 'form-date-select', value: second, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setSecond(parseInt(e.target.value)) },
           ...SECONDS.map(s => React.createElement('option', { key: s, value: s }, pad(s) + '秒')),
         ),
       ),
@@ -178,38 +163,31 @@ export default function Countdown() {
       .map(cd => {
         const { passed, d, h, m, s } = calcRemaining(cd)
 
+        const display = d > 0
+          ? `${d}天 ${pad(h)}:${pad(m)}:${pad(s)}`
+          : `${pad(h)}:${pad(m)}:${pad(s)}`
+
         return React.createElement('div', {
           key: cd.id,
-          style: {
-            background: 'var(--card-bg)',
-            borderRadius: 'var(--radius)',
-            padding: 16,
-            boxShadow: 'var(--shadow)',
-            marginBottom: 12,
-            borderLeft: `4px solid ${passed ? '#10b981' : '#3b82f6'}`,
-          },
+          className: 'countdown-card' + (passed ? '' : d <= 3 ? ' urgent' : ''),
+          style: passed ? { opacity: 0.6 } : {},
         },
-          React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
-            React.createElement('div', null,
-              React.createElement('div', { style: { fontSize: 15, fontWeight: 600 } }, cd.title),
-              React.createElement('div', { style: { fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 } },
-                cd.targetDate + (cd.targetTime ? ' ' + cd.targetTime : ''),
-              ),
+          React.createElement('div', { className: 'countdown-header' },
+            React.createElement('span', { className: 'countdown-label' }, cd.title),
+            React.createElement('span', { className: 'countdown-date' },
+              cd.targetDate + (cd.targetTime ? ' ' + cd.targetTime : ''),
             ),
-            React.createElement('button', {
-              className: 'btn btn-secondary btn-xs',
-              onClick: () => dispatch({ type: 'DELETE_COUNTDOWN', payload: cd.id }),
-              style: { color: '#ef4444' },
-            }, '删除'),
           ),
-          React.createElement('div', { style: { fontSize: 28, fontWeight: 700, textAlign: 'center', marginTop: 12, fontVariantNumeric: 'tabular-nums' } },
-            passed
-              ? '已到达'
-              : d + '天 ' + pad(h) + ':' + pad(m) + ':' + pad(s),
+          React.createElement('div', { className: 'countdown-sub' },
+            passed ? '事件已发生' : `距离「${cd.title}」还剩`,
           ),
-          React.createElement('div', { style: { fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', marginTop: 4 } },
-            passed ? '事件已发生' : '距离事件还剩',
+          React.createElement('div', { className: 'countdown-timer' },
+            passed ? '已到达' : display,
           ),
+          React.createElement('button', {
+            className: 'btn btn-xs countdown-del',
+            onClick: () => dispatch({ type: 'DELETE_COUNTDOWN', payload: cd.id }),
+          }, '删除'),
         )
       }),
   )

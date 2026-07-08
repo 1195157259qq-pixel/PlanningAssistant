@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useStore } from '../store'
-import { Task, STATUS_COLORS } from '../types'
+import { Task, STATUS_COLORS, REPEAT_COLORS } from '../types'
 
 function formatDateLocal(d: Date): string {
   const y = d.getFullYear()
@@ -87,14 +87,15 @@ export default function DayView({ onTaskClick }: Props) {
                   <div className="day-slot-content">
                     {tasks.map(task => {
                       const isDone = task.status === 'done'
+                      const color = REPEAT_COLORS[task.repeat]
                       return (
                         <div
                           key={task.id}
                           className="day-task-chip"
                           style={{
-                            background: STATUS_COLORS[task.status],
+                            background: color + 'dd',
                             textDecoration: isDone ? 'line-through' : 'none',
-                            opacity: isDone ? 0.65 : 1,
+                            opacity: isDone ? 0.55 : 1,
                           }}
                           onClick={() => onTaskClick?.(task)}
                         >

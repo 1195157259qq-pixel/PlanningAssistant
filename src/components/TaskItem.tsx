@@ -1,6 +1,6 @@
 import React from 'react'
 import { useStore } from '../store'
-import { Task, TaskStatus, STATUS_LABELS, STATUS_COLORS, REPEAT_LABELS } from '../types'
+import { Task, TaskStatus, STATUS_LABELS, STATUS_COLORS, REPEAT_LABELS, REPEAT_COLORS } from '../types'
 
 interface Props {
   task: Task
@@ -52,7 +52,10 @@ export default function TaskItem({ task, onSelect, onDeleteWithUndo }: Props) {
       task.description && React.createElement('div', { className: 'task-desc' }, task.description),
       (task.repeat !== 'none' || task.category || task.location) &&
         React.createElement('div', { style: { display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' } },
-          task.repeat !== 'none' && React.createElement('span', { className: 'task-info-tag' }, REPEAT_LABELS[task.repeat]),
+          task.repeat !== 'none' && React.createElement('span', {
+            className: 'task-info-tag',
+            style: { background: REPEAT_COLORS[task.repeat] + '20', color: REPEAT_COLORS[task.repeat] },
+          }, REPEAT_LABELS[task.repeat]),
           task.category && React.createElement('span', { className: 'task-info-tag', style: { background: '#eef2ff', color: '#4f46e5' } }, task.category),
           task.location && React.createElement('span', { className: 'task-info-tag', style: { background: '#fef3c7', color: '#92400e' } }, task.location),
         ),

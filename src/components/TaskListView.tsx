@@ -4,12 +4,20 @@ import { Task, TaskStatus, STATUS_COLORS } from '../types'
 import TaskItem from './TaskItem'
 
 type FilterKey = 'all' | TaskStatus
+type DateRangeKey = 'today' | 'week' | 'month' | 'all'
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: '全部' },
   { key: 'todo', label: '待办' },
   { key: 'done', label: '已办' },
   { key: 'overdue', label: '过期未办' },
+]
+
+const DATE_RANGES: { key: DateRangeKey; label: string }[] = [
+  { key: 'today', label: '当日' },
+  { key: 'week', label: '一周内' },
+  { key: 'month', label: '一月内' },
+  { key: 'all', label: '所有' },
 ]
 
 interface Props {
@@ -23,13 +31,32 @@ export default function TaskListView({ onEdit, onDeleteWithUndo, onTaskClick }: 
   const [filter, setFilter] = useState<FilterKey>('todo')
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('')
+  const [dateRange, setDateRange] = useState<DateRangeKey>('today')
 
   const todayStr = getTodayStr()
+
+  function addDays(dateStr: string, n: number): string {
+    const d = new Date(dateStr + 'T00:00:00')
+    d.setDate(d.getDate() + n)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  const weekEnd = addDays(todayStr, 7)
+  const monthEnd = addDays(todayStr, 30)
 
   const filteredTasks = useMemo(() => {
     let tasks = filter === 'all' ? state.tasks : state.tasks.filter(t => t.status === filter)
     if (filter === 'todo') {
-      tasks = tasks.filter(t => t.dueDate === todayStr)
+      if (dateRange === 'today') {
+        tasks = tasks.filter(t => t.dueDate === todayStr)
+      } else if (dateRange === 'week') {
+        tasks = tasks.filter(t => t.dueDate >= todayStr && t.dueDate <= weekEnd)
+      } else if (dateRange === 'month') {
+        tasks = tasks.filter(t => t.dueDate >= todayStr && t.dueDate <= monthEnd)
+      }
     }
     if (catFilter) {
       tasks = tasks.filter(t => t.category === catFilter)
@@ -44,7 +71,7 @@ export default function TaskListView({ onEdit, onDeleteWithUndo, onTaskClick }: 
       )
     }
     return tasks
-  }, [state.tasks, filter, search, catFilter, todayStr])
+  }, [state.tasks, filter, search, catFilter, todayStr, weekEnd, monthEnd, dateRange])
 
   const hasTasks = state.tasks.length > 0
 
@@ -77,7 +104,7 @@ export default function TaskListView({ onEdit, onDeleteWithUndo, onTaskClick }: 
           }, f.label + ' (' + (f.key === 'all'
             ? state.tasks.length
             : f.key === 'todo'
-              ? state.tasks.filter(t => t.status === 'todo' && t.dueDate === todayStr).length
+              ? state.tasks.filter(t => t.status === 'todo' && (dateRange === 'today' ? t.dueDate === todayStr : dateRange === 'week' ? (t.dueDate >= todayStr && t.dueDate <= weekEnd) : dateRange === 'month' ? (t.dueDate >= todayStr && t.dueDate <= monthEnd) : true)).length
               : state.tasks.filter(t => t.status === f.key).length) + ')'),
         ),
       ),
@@ -100,6 +127,18 @@ export default function TaskListView({ onEdit, onDeleteWithUndo, onTaskClick }: 
         ...state.categories.map(c =>
           React.createElement('option', { key: c, value: c }, c + ' (' + state.tasks.filter(t => t.category === c).length + ')'),
         ),
+      ),
+    ),
+    filter === 'todo' && hasTasks && React.createElement('div', { className: 'filter-tabs', style: { marginBottom: 12 } },
+      ...DATE_RANGES.map(dr =>
+        React.createElement('button', {
+          key: dr.key,
+          className: 'filter-tab filter-tab-sm' + (dateRange === dr.key ? ' active' : ''),
+          onClick: () => setDateRange(dr.key),
+          style: dateRange === dr.key
+            ? { background: 'var(--todo)', color: '#fff' }
+            : {},
+        }, dr.label),
       ),
     ),
     !hasTasks && React.createElement('div', { className: 'empty-state' },

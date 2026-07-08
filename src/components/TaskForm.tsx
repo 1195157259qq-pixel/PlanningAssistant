@@ -112,19 +112,9 @@ export default function TaskForm({ onClose, editTask }: Props) {
     onClose()
   }
 
-  const selStyle: React.CSSProperties = {
-    width: '100%',
-    padding: '9px 4px',
-    border: '1px solid var(--border)',
-    borderRadius: 8,
-    fontSize: 14,
-    fontFamily: 'inherit',
-    cursor: 'pointer',
-    background: '#fff',
-    outline: 'none',
-    textAlign: 'center',
-    appearance: 'auto',
-  }
+  const selProps = {
+    className: 'form-date-select',
+  } as const
 
   return React.createElement('div', { className: 'modal-overlay', onClick: onClose },
     React.createElement('div', { className: 'modal', onClick: (e: React.MouseEvent) => e.stopPropagation() },
@@ -161,9 +151,9 @@ export default function TaskForm({ onClose, editTask }: Props) {
             '设置截止时间',
           ),
           hasDueDate && React.createElement('div', { style: { marginTop: 8 } },
-            React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+            React.createElement('div', { className: 'form-date-row', style: { marginBottom: 8 } },
               React.createElement('select', {
-                style: selStyle,
+                ...selProps,
                 value: dateParts.year,
                 onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('year', parseInt(e.target.value)),
               },
@@ -172,7 +162,7 @@ export default function TaskForm({ onClose, editTask }: Props) {
                 ),
               ),
               React.createElement('select', {
-                style: selStyle,
+                ...selProps,
                 value: dateParts.month,
                 onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('month', parseInt(e.target.value)),
               },
@@ -181,7 +171,7 @@ export default function TaskForm({ onClose, editTask }: Props) {
                 ),
               ),
               React.createElement('select', {
-                style: selStyle,
+                ...selProps,
                 value: dateParts.day,
                 onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setPart('day', parseInt(e.target.value)),
               },
@@ -190,9 +180,10 @@ export default function TaskForm({ onClose, editTask }: Props) {
                 ),
               ),
             ),
-            React.createElement('div', { style: { display: 'flex', gap: 6, alignItems: 'center' } },
+            React.createElement('div', { className: 'form-date-row', style: { alignItems: 'center' } },
               React.createElement('select', {
-                style: { ...selStyle, opacity: isAllDay ? 0.4 : 1 },
+                className: 'form-date-select',
+                style: { opacity: isAllDay ? 0.4 : 1 },
                 value: timeParts.hour,
                 onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setTimePart('hour', parseInt(e.target.value)),
                 disabled: isAllDay,
@@ -201,9 +192,10 @@ export default function TaskForm({ onClose, editTask }: Props) {
                   React.createElement('option', { key: h, value: h }, pad(h) + '时'),
                 ),
               ),
-              React.createElement('span', { style: { fontSize: 14, color: isAllDay ? '#ccc' : '#999' } }, ':'),
+              React.createElement('span', { style: { fontSize: 14, color: isAllDay ? '#ccc' : '#999', flexShrink: 0 } }, ':'),
               React.createElement('select', {
-                style: { ...selStyle, opacity: isAllDay ? 0.4 : 1 },
+                className: 'form-date-select',
+                style: { opacity: isAllDay ? 0.4 : 1 },
                 value: timeParts.minute,
                 onChange: (e: React.ChangeEvent<HTMLSelectElement>) => setTimePart('minute', parseInt(e.target.value)),
                 disabled: isAllDay,
@@ -252,9 +244,9 @@ export default function TaskForm({ onClose, editTask }: Props) {
         ),
         React.createElement('div', { className: 'form-group' },
           React.createElement('label', { className: 'form-label' }, '地点'),
-          React.createElement('div', { style: { display: 'flex', gap: 6, marginBottom: 8 } },
+          React.createElement('div', { className: 'form-date-row', style: { marginBottom: 8 } },
             React.createElement('select', {
-              style: selStyle,
+              ...selProps,
               value: province,
               onChange: (e: React.ChangeEvent<HTMLSelectElement>) => handleProvinceChange(e.target.value),
             },
@@ -264,7 +256,7 @@ export default function TaskForm({ onClose, editTask }: Props) {
               ),
             ),
             React.createElement('select', {
-              style: selStyle,
+              ...selProps,
               value: city,
               onChange: (e: React.ChangeEvent<HTMLSelectElement>) => handleCityChange(e.target.value),
               disabled: !province,

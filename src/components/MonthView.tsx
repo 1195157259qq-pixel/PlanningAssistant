@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { useStore } from '../store'
-import { Task, STATUS_COLORS } from '../types'
+import { Task, STATUS_COLORS, REPEAT_COLORS } from '../types'
 
 const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六']
 
@@ -120,14 +120,15 @@ export default function MonthView({ onTaskClick }: Props) {
                 <div className="month-cell-date">{cell.day}</div>
                 {tasks.slice(0, 3).map(task => {
                   const isDone = task.status === 'done'
+                  const color = REPEAT_COLORS[task.repeat]
                   return (
                     <div
                       key={task.id}
                       className="month-task-dot"
                       style={{
-                        background: STATUS_COLORS[task.status],
+                        background: color + 'dd',
                         textDecoration: isDone ? 'line-through' : 'none',
-                        opacity: isDone ? 0.65 : 1,
+                        opacity: isDone ? 0.55 : 1,
                       }}
                       onClick={(e: React.MouseEvent) => {
                         e.stopPropagation()

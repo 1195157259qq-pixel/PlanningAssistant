@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { useStore } from '../store'
-import { Task, STATUS_COLORS } from '../types'
+import { Task, STATUS_COLORS, REPEAT_COLORS } from '../types'
 
 function formatDateLocal(d: Date): string {
   const y = d.getFullYear()
@@ -97,16 +97,17 @@ export default function WeekView({ onTaskClick }: Props) {
             <div key={d} className="week-day-col">
               <div onClick={() => goDay(d)} style={{ cursor: 'pointer', minHeight: 8 }} />
               {tasksByDay[d].map(task => {
-                const isDone = task.status === 'done'
-                return (
-                  <div
-                    key={task.id}
-                    className="week-task-dot"
-                    style={{
-                      background: STATUS_COLORS[task.status],
-                      textDecoration: isDone ? 'line-through' : 'none',
-                      opacity: isDone ? 0.65 : 1,
-                    }}
+                  const isDone = task.status === 'done'
+                  const color = REPEAT_COLORS[task.repeat]
+                  return (
+                    <div
+                      key={task.id}
+                      className="week-task-dot"
+                      style={{
+                        background: color + 'dd',
+                        textDecoration: isDone ? 'line-through' : 'none',
+                        opacity: isDone ? 0.55 : 1,
+                      }}
                     onClick={(e: React.MouseEvent) => {
                       e.stopPropagation()
                       onTaskClick?.(task)

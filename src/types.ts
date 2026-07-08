@@ -67,3 +67,11 @@ export const REPEAT_LABELS: Record<RepeatType, string> = {
   'monthly': '每月',
   'yearly': '每年',
 }
+
+export const REPEAT_COLORS: Record<RepeatType, string> = {
+  'none': '#a599b0',
+  'daily': '#f7a1c4',
+  'weekly': '#f5a97f',
+  'monthly': '#7cc5ea',
+  'yearly': '#8fd4a3',
+}
